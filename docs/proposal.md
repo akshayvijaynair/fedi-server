@@ -16,6 +16,21 @@ These problems have been highlighted many times and platforms have taken steps t
 > [!IMPORTANT]
 > The basic project objectives are: Implementation of a simple client-server system that is capable of federation via the ActivityPub Protocol.
 
+### Hardware Requirements
+Since we are targeting a cloud based system, there are no upfront hardware requirements for this system.
+
+### Software Requirements
+In terms of software, we are attempting to leverage JVM based technologies, specifically Kotlin based Kotlin multi-platform for the front-end and Java Spring Boot for the backend. 
+
+Additionally we're going to employ a noSQL database to manage persistence.
+
+## Prospective Users
+
+The current scope would be limited to known niche communities, universities, neighbourhoods, and such like. 
+
+## Alternatives
+There are already plenty of client and server implementation of the ActivityPub protocol. That being said, we want to explore the possibility of creating a system where different features could be plugged-in depending on the server admin's requirements. plugins could include features such as content-filters, language support, themes etc.
+
 
 
 

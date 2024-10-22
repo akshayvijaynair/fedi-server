@@ -1,4 +1,4 @@
-package com.PaceUniversity.Capstone.MVP;
+package com.PaceUniversity;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -9,5 +9,10 @@ public class CapstoneMvpApplication {
 	public static void main(String[] args) {
 		SpringApplication.run(CapstoneMvpApplication.class, args);
 	}
+
+
+
+
+
 
 }

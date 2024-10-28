@@ -1,28 +1,24 @@
 package com.PaceUniversity.Application.entity;
 
-import jakarta.persistence.*;
+import jakarta.persistence.*; // Ensure you're importing JPA correctly
 import lombok.Data;
 
+@Data
+@Entity
+@Table(name = "UserTable")
 public class User {
 
-
-   @Data
-   @Entity
-   @Table(name = "UserTable")
-
-
-
     @Id
-    @GeneratedValue(strategy =  GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-   @Column(nullable = false, unique = true);
-   private String username;
+    @Column(nullable = false, unique = true)
+    private String username;
 
-    @Column(nullable = false, unique = true);
+    @Column(nullable = false, unique = true)
     private String email;
 
-    @Column(nullable = false);
+    @Column(nullable = false)
     private String password;
 
     private String bio;
@@ -30,62 +26,4 @@ public class User {
 
     @Column(nullable = false)
     private boolean active = true;
-
-
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getUsername() {
-        return username;
-    }
-
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
-
-    public String getBio() {
-        return bio;
-    }
-
-    public void setBio(String bio) {
-        this.bio = bio;
-    }
-
-    public String getProfilePictureURL() {
-        return profilePictureURL;
-    }
-
-    public void setProfilePictureURL(String profilePictureURL) {
-        this.profilePictureURL = profilePictureURL;
-    }
-
-    public boolean isActive() {
-        return active;
-    }
-
-    public void setActive(boolean active) {
-        this.active = active;
-    }
 }

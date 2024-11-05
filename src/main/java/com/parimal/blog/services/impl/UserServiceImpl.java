@@ -1,9 +1,15 @@
 package com.parimal.blog.services.impl;
 
-import java.util.List;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.NoSuchAlgorithmException;
+import java.util.*;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.parimal.blog.entities.Account;
+import com.parimal.blog.repositories.AccountRepo;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -18,14 +24,22 @@ import com.parimal.blog.repositories.RoleRepo;
 import com.parimal.blog.repositories.UserRepo;
 import com.parimal.blog.services.UserService;
 
+import static io.jsonwebtoken.impl.crypto.EllipticCurveProvider.generateKeyPair;
+
 @Service
 public class UserServiceImpl implements UserService {
 	
 	@Autowired
 	private UserRepo userRepo;
+
+	@Autowired
+	private AccountRepo accountRepo;
 	
 	@Autowired
 	private ModelMapper modelMapper;
+
+	@Autowired
+	private ObjectMapper objectMapper; // Jackson ObjectMapper for JSON serialization
 	
 	@Autowired
 	private PasswordEncoder passwordEncoder;
@@ -77,7 +91,80 @@ public class UserServiceImpl implements UserService {
 		this.userRepo.delete(user);
 
 	}
-	
+
+	@Override
+	public Map<String, Object> createActor(String email, String publicKey) {
+		if (email == null || publicKey == null) {
+			throw new IllegalArgumentException("Email and public key must not be null");
+		}
+
+		// Using HashMap to allow conditional key-value addition and prevent null issues with Map.of()
+		Map<String, Object> actor = new HashMap<>();
+		actor.put("@context", "https://www.w3.org/ns/activitystreams");
+		actor.put("id", "https://" + AppConstants.DOMAIN + "/users/" + email);
+		actor.put("type", "Person");
+		actor.put("preferredUsername", email.split("@")[0]);
+
+		// PublicKey object construction with checks
+		Map<String, String> publicKeyMap = new HashMap<>();
+		publicKeyMap.put("id", "https://" + AppConstants.DOMAIN + "/users/" + email + "#main-key");
+		publicKeyMap.put("owner", "https://" + AppConstants.DOMAIN + "/users/" + email);
+		publicKeyMap.put("publicKeyPem", publicKey);
+
+		actor.put("publicKey", publicKeyMap);
+
+		return actor;
+	}
+
+
+	@Override
+	public Map<String, Object> createWebfinger(String email) {
+		Map<String, Object> webfinger = new HashMap<>();
+		webfinger.put("subject", "acct:" + email);
+		webfinger.put("links", new Object[]{
+				Map.of(
+						"rel", "self",
+						"type", "application/activity+json",
+						"href", "https://" + AppConstants.DOMAIN + "/users/" + email
+				)
+		});
+		return webfinger;
+	}
+
+	@Override
+	public Account saveAccount(UserDto userDto, Map<String, Object> actorRecord, Map<String, Object> webfingerRecord, String privateKey) {
+		// Check if an account with the same email already exists
+		Optional<Account> existingAccount = accountRepo.findByName(userDto.getEmail());
+		if (existingAccount.isPresent()) {
+			throw new RuntimeException("Account with email " + userDto.getEmail() + " already exists.");
+		}
+
+		// Create and populate the Account entity with ActivityPub and user information
+		Account account = new Account();
+		account.setName(userDto.getEmail());
+
+		try {
+			// Serialize actor and webfinger records to JSON strings
+			String actorJson = objectMapper.writeValueAsString(actorRecord);
+			String webfingerJson = objectMapper.writeValueAsString(webfingerRecord);
+
+			// Set fields in the Account entity
+			account.setActor(actorJson);
+			account.setPubkey(actorRecord.get("publicKey").toString());
+			account.setPrivkey(privateKey);
+			account.setWebfinger(webfingerJson);
+			account.setSummary(userDto.getAbout());
+
+			// Save the Account entity
+			return accountRepo.save(account);
+		} catch (Exception e) {
+			throw new RuntimeException("Failed to save account information", e);
+		}
+	}
+
+
+
+
 	private User dtoToUser(UserDto userDto) {
 		//User user = new User();
 		User user = this.modelMapper.map(userDto, User.class);
@@ -105,19 +192,39 @@ public class UserServiceImpl implements UserService {
 	}
 
 	@Override
-	public UserDto registerNewUser(UserDto userDto) {
-		
-		User user = this.modelMapper.map(userDto, User.class);
-		
-		//We have encoded the password
-		user.setPassword(this.passwordEncoder.encode(user.getPassword()));
-		
-		//roles
-		Role role = this.roleRepo.findById(AppConstants.NORMAL_USER).get();
-		user.getRoles().add(role);
-		User newUser = this.userRepo.save(user);
-		
-		return this.modelMapper.map(newUser, UserDto.class);
+	public Account registerNewUser(UserDto userDto) {
+		// Map userDto to User entity and save basic information
+		User user = modelMapper.map(userDto, User.class);
+		user.setPassword(passwordEncoder.encode(userDto.getPassword()));
+
+		// Save the User to the database
+		User savedUser = userRepo.save(user);
+
+		// Generate RSA Key Pair for ActivityPub
+		KeyPair keyPair = generateKeyPair();
+		String publicKey = encodeKey(keyPair.getPublic().getEncoded());
+		String privateKey = encodeKey(keyPair.getPrivate().getEncoded());
+
+		// Create Actor and Webfinger records for ActivityPub
+		Map<String, Object> actorRecord = createActor(userDto.getEmail(), publicKey);
+		Map<String, Object> webfingerRecord = createWebfinger(userDto.getEmail());
+
+		// Save the Account entity with ActivityPub information
+		return saveAccount(userDto, actorRecord, webfingerRecord, privateKey);
+	}
+
+	private KeyPair generateKeyPair() {
+		try {
+			KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
+			keyGen.initialize(2048);
+			return keyGen.generateKeyPair();
+		} catch (NoSuchAlgorithmException e) {
+			throw new RuntimeException("Failed to generate RSA key pair", e);
+		}
+	}
+
+	private String encodeKey(byte[] key) {
+		return Base64.getEncoder().encodeToString(key);
 	}
 
 }

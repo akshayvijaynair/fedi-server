@@ -1,9 +1,17 @@
 package com.parimal.blog.entities;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import javax.persistence.*;
+import org.hibernate.annotations.Type;
+import org.hibernate.annotations.TypeDef;
+import org.hibernate.annotations.TypeDefs;
+import com.vladmihalcea.hibernate.type.json.JsonBinaryType;
 
 @Entity
 @Table(name = "accounts")
+@TypeDefs({
+        @TypeDef(name = "json", typeClass = JsonBinaryType.class)
+})
 public class Account {
 
     @Id
@@ -13,23 +21,27 @@ public class Account {
     @Column(name = "name", unique = true, nullable = false)
     private String name;
 
-    @Column(name = "actor", columnDefinition = "TEXT", nullable = false)
-    private String actor; // JSON string of the Actor data
+    @Type(type = "json")
+    @Column(name = "actor", columnDefinition = "jsonb", nullable = false)
+    private JsonNode actor;
 
-    @Column(name = "pubkey", columnDefinition = "TEXT", nullable = false)
-    private String pubkey;
+    @Type(type = "json")
+    @Column(name = "pubkey", columnDefinition = "jsonb", nullable = false)
+    private JsonNode pubkey;
 
-    @Column(name = "privkey", columnDefinition = "TEXT", nullable = false)
-    private String privkey;
+    @Type(type = "json")
+    @Column(name = "privkey", columnDefinition = "jsonb", nullable = false)
+    private JsonNode privkey;
 
-    @Column(name = "webfinger", columnDefinition = "TEXT", nullable = false)
-    private String webfinger;
+    @Type(type = "json")
+    @Column(name = "webfinger", columnDefinition = "jsonb", nullable = false)
+    private JsonNode webfinger;
 
     @Column(name = "summary", columnDefinition = "TEXT")
     private String summary;
 
     @Column(name = "icon", columnDefinition = "TEXT")
-    private String icon; // JSON string if storing additional icon metadata
+    private String icon;
 
     @Column(name = "followers", columnDefinition = "TEXT")
     private String followers;
@@ -41,7 +53,7 @@ public class Account {
     private String liked;
 
     @Column(name = "endpoints", columnDefinition = "TEXT")
-    private String endpoints; // JSON string of endpoints, e.g., shared inbox
+    private String endpoints;
 
     // Getters and setters
 
@@ -61,35 +73,35 @@ public class Account {
         this.name = name;
     }
 
-    public String getActor() {
+    public JsonNode getActor() {
         return actor;
     }
 
-    public void setActor(String actor) {
+    public void setActor(JsonNode actor) {
         this.actor = actor;
     }
 
-    public String getPubkey() {
+    public JsonNode getPubkey() {
         return pubkey;
     }
 
-    public void setPubkey(String pubkey) {
+    public void setPubkey(JsonNode pubkey) {
         this.pubkey = pubkey;
     }
 
-    public String getPrivkey() {
+    public JsonNode getPrivkey() {
         return privkey;
     }
 
-    public void setPrivkey(String privkey) {
+    public void setPrivkey(JsonNode privkey) {
         this.privkey = privkey;
     }
 
-    public String getWebfinger() {
+    public JsonNode getWebfinger() {
         return webfinger;
     }
 
-    public void setWebfinger(String webfinger) {
+    public void setWebfinger(JsonNode webfinger) {
         this.webfinger = webfinger;
     }
 
@@ -141,4 +153,3 @@ public class Account {
         this.endpoints = endpoints;
     }
 }
-

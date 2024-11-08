@@ -41,6 +41,15 @@
 		</dependency>
 
 
+		<!--Json Support Dependency-->
+		<dependency>
+			<groupId>com.vladmihalcea</groupId>
+			<artifactId>hibernate-types-52</artifactId>
+			<version>2.12.1</version> <!-- or latest version -->
+		</dependency>
+
+
+
 		<dependency>
 			<groupId>org.postgresql</groupId>
 			<artifactId>postgresql</artifactId>

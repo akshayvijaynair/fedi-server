@@ -1,57 +1,41 @@
-pipeline{
+pipeline {
+    agent any // Defines the Jenkins agent to run the pipeline.
 
-  agent any //  Defines the jenkins agent to run the pipeline.
+    // Stages define the sequence flow of the pipeline
+    stages {
 
+        stage('Verify Branch') {
+            steps {
+                script {
+                    // Assuming Git_Branch is an environment variable or a parameter
+                    echo "Branch: ${env.Git_Branch ?: 'No branch specified'}"
+                }
+            }
+        }
 
-  // Stages will tracking the squenceing flow of the pipeline
+        stage('Build') {
+            steps {
+                echo 'Building...'
+                // Add your build commands here
+                sh 'mvn clean install' // Executes the Maven build
+            }
+        }
 
-
-  stages {
-
-  stage ('verify branch')
-  {steps {
-  echo "$Git_Branch"
-  }
-}
-
-
-  stage ('Build'){
-  steps {
-    echo 'Building...'
-    //  please add build commands here  " mvn clean install "
+        stage('Deploy') {
+            steps {
+                echo 'Deploying...'
+                sh 'mvn clean install' // Executes the Maven build for deployment
+            }
+        }
     }
-  }
 
-    stage (' Deploy ') {
-
-
-  steps  {
-     echo 'Deploying...'
-     'mvn clean install'
-  }
-
-  steps{
-  'mvn clean install'
-  }
-  post {
-  steps{
-  success {
-  'Application Lunched'
-  }
-  }
-  steps{
-  failure{
-  'Application failure'
-  }
-  }
-
-  }
- }
-
-
-
-  }
-
-
-
+    // Post-build actions
+    post {
+        success {
+            echo 'Application launched successfully'
+        }
+        failure {
+            echo 'Application failed to launch'
+        }
+    }
 }

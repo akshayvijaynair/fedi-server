@@ -29,12 +29,20 @@ pipeline{
      echo 'Deploying...'
      'mvn clean install'
   }
+
+  steps{
+  'mvn clean install'
+  }
   post {
-  succuess {
+  steps{
+  success {
   'Application Lunched'
   }
+  }
+  steps{
   failure{
   'Application failure'
+  }
   }
 
   }

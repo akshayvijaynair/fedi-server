@@ -1,0 +1,37 @@
+pipeline{
+
+  agent any //  Defines the jenkins agent to run the pipeline.
+
+
+  // Stages will tracking the squenceing flow of the pipeline
+
+
+  stages {
+
+  stage ('verify branch')
+  {steps {
+  echo "$Git_Branch"
+  }
+}
+
+
+  stage ('Build'){
+  steps {
+    echo 'Building...'
+    //  please add build commands here  " mvn clean install "
+    }
+  }
+
+    stage (' Deploy ') {
+  steps  {
+     echo 'Deploying...'
+  }
+ }
+
+
+
+  }
+
+
+
+}

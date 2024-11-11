@@ -23,8 +23,20 @@ pipeline{
   }
 
     stage (' Deploy ') {
+
+
   steps  {
      echo 'Deploying...'
+     'mvn clean install'
+  }
+  post {
+  succuess {
+  'Application Lunched'
+  }
+  failure{
+  'Application failure'
+  }
+
   }
  }
 

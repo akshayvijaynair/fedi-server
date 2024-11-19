@@ -128,7 +128,8 @@
 				</configuration>
 			</plugin>
 		</plugins>
-		<finalName>spring-boot-docker</finalName>
+		<finalName>fedi-server-0.0.1-SNAPSHOT</finalName>
+
 	</build>
 
 </project>

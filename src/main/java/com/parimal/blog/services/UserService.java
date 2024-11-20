@@ -74,4 +74,11 @@ public interface UserService {
 	 */
 	Map<String, Object> createWebfinger(String email);
 
+	/**
+	 * Retrieves all accounts with only their IDs and names.
+	 * @return A list of maps containing account IDs and names.
+	 */
+	List<Map<String, Object>> getAllAccountIdsAndNames();
+
+
 }

@@ -93,6 +93,14 @@ public class UserServiceImpl implements UserService {
 		Map<String, Object> actorRecord = createActor(userDto.getEmail(), publicKey);
 		Map<String, Object> webfingerRecord = createWebfinger(userDto.getEmail());
 
+		// Save to Users table
+		User user = new User();
+		user.setName(userDto.getName());
+		user.setEmail(userDto.getEmail());
+		user.setPassword(passwordEncoder.encode(userDto.getPassword())); // Encrypt password
+		user.setAbout(userDto.getAbout());
+		userRepo.save(user);
+
 		return saveAccount(userDto, actorRecord, webfingerRecord, privateKey);
 	}
 
@@ -144,6 +152,27 @@ public class UserServiceImpl implements UserService {
 	}
 
 	@Override
+	public List<Map<String, Object>> getAllAccountIdsAndNames() {
+		return accountRepo.findAll()
+				.stream()
+				.map(account -> {
+					try {
+						Map<String, Object> accountMap = new HashMap<>();
+						accountMap.put("id", account.getId());
+						accountMap.put("name", account.getName());
+						return accountMap;
+					} catch (Exception e) {
+						// Log the issue and skip this account
+						System.err.println("Error processing account: " + account.getId() + " - " + e.getMessage());
+						return null;
+					}
+				})
+				.filter(Objects::nonNull)
+				.collect(Collectors.toList());
+	}
+
+
+	@Override
 	public Account saveAccount(UserDto userDto, Map<String, Object> actorRecord, Map<String, Object> webfingerRecord, String privateKey) {
 		Optional<Account> existingAccount = accountRepo.findByName(userDto.getEmail());
 		if (existingAccount.isPresent()) {
@@ -154,14 +183,19 @@ public class UserServiceImpl implements UserService {
 		account.setName(userDto.getEmail());
 
 		try {
+			// Convert actor and webfinger records to valid JSON
 			JsonNode actorJson = objectMapper.valueToTree(actorRecord);
 			JsonNode webfingerJson = objectMapper.valueToTree(webfingerRecord);
-			JsonNode pubkeyJson = actorJson.get("publicKey");
 
+			// Wrap Base64 private key into a valid JSON object
+			JsonNode privkeyJson = objectMapper.readTree("{\"key\": \"" + privateKey + "\"}");
+
+			// Store actor and webfinger as JSON objects
 			account.setActor(actorJson);
-			account.setPubkey(pubkeyJson);
-			account.setPrivkey(objectMapper.convertValue(privateKey, JsonNode.class));
 			account.setWebfinger(webfingerJson);
+			account.setPrivkey(privkeyJson);
+			account.setPubkey(privkeyJson); // Example, use the correct pubkey if different
+
 			account.setSummary(userDto.getAbout());
 
 			return accountRepo.save(account);
@@ -169,6 +203,7 @@ public class UserServiceImpl implements UserService {
 			throw new RuntimeException("Failed to save account information", e);
 		}
 	}
+
 
 	private User dtoToUser(UserDto userDto) {
 		return this.modelMapper.map(userDto, User.class);

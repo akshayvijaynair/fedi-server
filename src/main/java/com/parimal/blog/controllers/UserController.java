@@ -63,5 +63,10 @@ public class UserController {
 	public ResponseEntity<UserDto> getSingleUser(@PathVariable Integer userId){
 		return ResponseEntity.ok(this.userService.getUserById(userId));
 	}
-	
+
+	@GetMapping("/accounts")
+	public ResponseEntity<List<Map<String, Object>>> getAllAccountIdsAndNames() {
+		  List<Map<String, Object>> accounts = this.userService.getAllAccountIdsAndNames();
+		return ResponseEntity.ok(accounts);
+	}
 }

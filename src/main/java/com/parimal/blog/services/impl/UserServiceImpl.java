@@ -10,6 +10,7 @@ import com.parimal.blog.payloads.UserDto;
 import com.parimal.blog.repositories.AccountRepo;
 import com.parimal.blog.repositories.RoleRepo;
 import com.parimal.blog.repositories.UserRepo;
+import com.parimal.blog.services.FollowService;
 import com.parimal.blog.services.UserService;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,6 +43,9 @@ public class UserServiceImpl implements UserService {
 
 	@Autowired
 	private RoleRepo roleRepo;
+
+	@Autowired
+	private FollowService followService;
 
 	@Override
 	public UserDto createUser(UserDto userDto) {
@@ -101,8 +105,20 @@ public class UserServiceImpl implements UserService {
 		user.setAbout(userDto.getAbout());
 		userRepo.save(user);
 
-		return saveAccount(userDto, actorRecord, webfingerRecord, privateKey);
+		// Generate follow URL
+		String followUrl = followService.generateFollowUrl(userDto.getEmail());
+		System.out.println("Generated Follow URL: " + followUrl); // Debugging log
+
+		// Save the account with the follow URL
+		Account account = saveAccount(userDto, actorRecord, webfingerRecord, privateKey, followUrl);
+
+		// Ensure follow URL is set
+		account.setFollowUrl(followUrl);
+		System.out.println("Follow URL set on account: " + account.getFollowUrl()); // Debugging log
+
+		return accountRepo.save(account);
 	}
+
 
 	private KeyPair generateKeyPair() {
 		try {
@@ -171,9 +187,14 @@ public class UserServiceImpl implements UserService {
 				.collect(Collectors.toList());
 	}
 
+	@Override
+	public List<Account> searchAccounts(String query) {
+		return accountRepo.searchAccountsByName(query);
+	}
+
 
 	@Override
-	public Account saveAccount(UserDto userDto, Map<String, Object> actorRecord, Map<String, Object> webfingerRecord, String privateKey) {
+	public Account saveAccount(UserDto userDto, Map<String, Object> actorRecord, Map<String, Object> webfingerRecord, String privateKey, String followUrl) {
 		Optional<Account> existingAccount = accountRepo.findByName(userDto.getEmail());
 		if (existingAccount.isPresent()) {
 			throw new RuntimeException("Account with email " + userDto.getEmail() + " already exists.");
@@ -190,19 +211,22 @@ public class UserServiceImpl implements UserService {
 			// Wrap Base64 private key into a valid JSON object
 			JsonNode privkeyJson = objectMapper.readTree("{\"key\": \"" + privateKey + "\"}");
 
-			// Store actor and webfinger as JSON objects
+			// Store actor, webfinger, and follow URL
 			account.setActor(actorJson);
 			account.setWebfinger(webfingerJson);
 			account.setPrivkey(privkeyJson);
-			account.setPubkey(privkeyJson); // Example, use the correct pubkey if different
+			account.setPubkey(privkeyJson); // Use a correct pubkey if different
+			account.setFollowUrl(followUrl); // Explicitly set the follow URL
 
 			account.setSummary(userDto.getAbout());
 
+			System.out.println("Saving account with follow URL: " + followUrl); // Debugging log
 			return accountRepo.save(account);
 		} catch (Exception e) {
 			throw new RuntimeException("Failed to save account information", e);
 		}
 	}
+
 
 
 	private User dtoToUser(UserDto userDto) {

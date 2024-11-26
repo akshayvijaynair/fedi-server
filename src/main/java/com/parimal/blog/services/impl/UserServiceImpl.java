@@ -139,6 +139,7 @@ public class UserServiceImpl implements UserService {
 		actor.put("id", "https://" + AppConstants.DOMAIN + "/users/" + email);
 		actor.put("type", "Person");
 		actor.put("preferredUsername", email.split("@")[0]);
+		actor.put("inbox", "https://" + AppConstants.DOMAIN + "/users/" + email + "/inbox"); // Add inbox URL
 
 		Map<String, String> publicKeyMap = new HashMap<>();
 		publicKeyMap.put("id", "https://" + AppConstants.DOMAIN + "/users/" + email + "#main-key");
@@ -149,6 +150,8 @@ public class UserServiceImpl implements UserService {
 
 		return actor;
 	}
+
+
 
 	@Override
 	public Map<String, Object> createWebfinger(String email) {

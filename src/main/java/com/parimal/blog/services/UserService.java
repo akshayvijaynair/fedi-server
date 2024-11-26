@@ -82,5 +82,4 @@ public interface UserService {
 
 	List<Account> searchAccounts(String query);
 
-
 }

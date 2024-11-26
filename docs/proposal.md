@@ -20,9 +20,9 @@ These problems have been highlighted many times and platforms have taken steps t
 Since we are targeting a cloud based system, there are no upfront hardware requirements for this system.
 
 ### Software Requirements
-In terms of software, we are attempting to leverage JVM based technologies, specifically Kotlin based Kotlin multi-platform for the front-end and Java Spring Boot for the backend. 
+In terms of software, we are attempting to leverage a Typescript based hybrid front-end using Ionic framework alongside Angular, and Java Spring Boot for the backend. 
 
-Additionally we're going to employ a noSQL database to manage persistence.
+Additionally we're going to employ a noSQL database, specifically Postgres, to manage persistence.
 
 ## Prospective Users
 

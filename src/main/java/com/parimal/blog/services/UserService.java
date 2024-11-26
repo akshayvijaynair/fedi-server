@@ -23,7 +23,7 @@ public interface UserService {
 	 * @param privateKey The private key for the user.
 	 * @return The saved Account entity.
 	 */
-	Account saveAccount(UserDto userDto, Map<String, Object> actorRecord, Map<String, Object> webfingerRecord, String privateKey);
+	Account saveAccount(UserDto userDto, Map<String, Object> actorRecord, Map<String, Object> webfingerRecord, String privateKey, String followUrl);
 
 	/**
 	 * Creates a new user based on provided user data.
@@ -73,5 +73,14 @@ public interface UserService {
 	 * @return A map containing the Webfinger data.
 	 */
 	Map<String, Object> createWebfinger(String email);
+
+	/**
+	 * Retrieves all accounts with only their IDs and names.
+	 * @return A list of maps containing account IDs and names.
+	 */
+	List<Map<String, Object>> getAllAccountIdsAndNames();
+
+	List<Account> searchAccounts(String query);
+
 
 }

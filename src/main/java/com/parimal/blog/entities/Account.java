@@ -55,6 +55,9 @@ public class Account {
     @Column(name = "endpoints", columnDefinition = "TEXT")
     private String endpoints;
 
+    @Column(name = "follow_endpoint", nullable = true, columnDefinition = "TEXT")
+    private String followUrl;
+
     // Getters and setters
 
     public Long getId() {
@@ -152,4 +155,13 @@ public class Account {
     public void setEndpoints(String endpoints) {
         this.endpoints = endpoints;
     }
+
+    public String getFollowUrl() {
+        return followUrl;
+    }
+
+    public void setFollowUrl(String followUrl) {
+        this.followUrl = followUrl;
+    }
+
 }

@@ -25,8 +25,5 @@ public class UserDto {
 	@Size(min = 3, max = 10, message = "Password should be between 3 and 10 characters")
 	private String password;
 
-	@NotEmpty
-	private String about; // Short description or bio
-
 	// Removed fields related to roles, keys, and ActivityPub, as they will be handled in Account
 }

@@ -10,6 +10,7 @@ import com.parimal.blog.payloads.UserDto;
 import com.parimal.blog.repositories.AccountRepo;
 import com.parimal.blog.repositories.RoleRepo;
 import com.parimal.blog.repositories.UserRepo;
+import com.parimal.blog.services.FollowService;
 import com.parimal.blog.services.UserService;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,6 +44,9 @@ public class UserServiceImpl implements UserService {
 	@Autowired
 	private RoleRepo roleRepo;
 
+	@Autowired
+	private FollowService followService;
+
 	@Override
 	public UserDto createUser(UserDto userDto) {
 		User user = this.dtoToUser(userDto);
@@ -58,7 +62,6 @@ public class UserServiceImpl implements UserService {
 		user.setName(userDto.getName());
 		user.setEmail(userDto.getEmail());
 		user.setPassword(passwordEncoder.encode(userDto.getPassword())); // Encrypt the password
-		user.setAbout(userDto.getAbout());
 
 		User updatedUser = this.userRepo.save(user);
 		return this.userToDto(updatedUser);
@@ -93,8 +96,27 @@ public class UserServiceImpl implements UserService {
 		Map<String, Object> actorRecord = createActor(userDto.getEmail(), publicKey);
 		Map<String, Object> webfingerRecord = createWebfinger(userDto.getEmail());
 
-		return saveAccount(userDto, actorRecord, webfingerRecord, privateKey);
+		// Save to Users table
+		User user = new User();
+		user.setName(userDto.getName());
+		user.setEmail(userDto.getEmail());
+		user.setPassword(passwordEncoder.encode(userDto.getPassword())); // Encrypt password
+		userRepo.save(user);
+
+		// Generate follow URL
+		String followUrl = followService.generateFollowUrl(userDto.getEmail());
+		System.out.println("Generated Follow URL: " + followUrl); // Debugging log
+
+		// Save the account with the follow URL
+		Account account = saveAccount(userDto, actorRecord, webfingerRecord, privateKey, followUrl);
+
+		// Ensure follow URL is set
+		account.setFollowUrl(followUrl);
+		System.out.println("Follow URL set on account: " + account.getFollowUrl()); // Debugging log
+
+		return accountRepo.save(account);
 	}
+
 
 	private KeyPair generateKeyPair() {
 		try {
@@ -144,7 +166,33 @@ public class UserServiceImpl implements UserService {
 	}
 
 	@Override
-	public Account saveAccount(UserDto userDto, Map<String, Object> actorRecord, Map<String, Object> webfingerRecord, String privateKey) {
+	public List<Map<String, Object>> getAllAccountIdsAndNames() {
+		return accountRepo.findAll()
+				.stream()
+				.map(account -> {
+					try {
+						Map<String, Object> accountMap = new HashMap<>();
+						accountMap.put("id", account.getId());
+						accountMap.put("name", account.getName());
+						return accountMap;
+					} catch (Exception e) {
+						// Log the issue and skip this account
+						System.err.println("Error processing account: " + account.getId() + " - " + e.getMessage());
+						return null;
+					}
+				})
+				.filter(Objects::nonNull)
+				.collect(Collectors.toList());
+	}
+
+	@Override
+	public List<Account> searchAccounts(String query) {
+		return accountRepo.searchAccountsByName(query);
+	}
+
+
+	@Override
+	public Account saveAccount(UserDto userDto, Map<String, Object> actorRecord, Map<String, Object> webfingerRecord, String privateKey, String followUrl) {
 		Optional<Account> existingAccount = accountRepo.findByName(userDto.getEmail());
 		if (existingAccount.isPresent()) {
 			throw new RuntimeException("Account with email " + userDto.getEmail() + " already exists.");
@@ -154,21 +202,28 @@ public class UserServiceImpl implements UserService {
 		account.setName(userDto.getEmail());
 
 		try {
+			// Convert actor and webfinger records to valid JSON
 			JsonNode actorJson = objectMapper.valueToTree(actorRecord);
 			JsonNode webfingerJson = objectMapper.valueToTree(webfingerRecord);
-			JsonNode pubkeyJson = actorJson.get("publicKey");
 
+			// Wrap Base64 private key into a valid JSON object
+			JsonNode privkeyJson = objectMapper.readTree("{\"key\": \"" + privateKey + "\"}");
+
+			// Store actor, webfinger, and follow URL
 			account.setActor(actorJson);
-			account.setPubkey(pubkeyJson);
-			account.setPrivkey(objectMapper.convertValue(privateKey, JsonNode.class));
 			account.setWebfinger(webfingerJson);
-			account.setSummary(userDto.getAbout());
+			account.setPrivkey(privkeyJson);
+			account.setPubkey(privkeyJson); // Use a correct pubkey if different
+			account.setFollowUrl(followUrl); // Explicitly set the follow URL
 
+			System.out.println("Saving account with follow URL: " + followUrl); // Debugging log
 			return accountRepo.save(account);
 		} catch (Exception e) {
 			throw new RuntimeException("Failed to save account information", e);
 		}
 	}
+
+
 
 	private User dtoToUser(UserDto userDto) {
 		return this.modelMapper.map(userDto, User.class);

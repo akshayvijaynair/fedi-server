@@ -5,6 +5,7 @@ import java.util.Map;
 
 import javax.validation.Valid;
 
+import com.parimal.blog.entities.Account;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -63,5 +64,16 @@ public class UserController {
 	public ResponseEntity<UserDto> getSingleUser(@PathVariable Integer userId){
 		return ResponseEntity.ok(this.userService.getUserById(userId));
 	}
-	
+
+	@GetMapping("/accounts")
+	public ResponseEntity<List<Map<String, Object>>> getAllAccountIdsAndNames() {
+		  List<Map<String, Object>> accounts = this.userService.getAllAccountIdsAndNames();
+		return ResponseEntity.ok(accounts);
+	}
+
+	@GetMapping("/search")
+	public ResponseEntity<List<Account>> searchAccounts(@RequestParam("query") String query) {
+		List<Account> accounts = userService.searchAccounts(query);
+		return ResponseEntity.ok(accounts);
+	}
 }

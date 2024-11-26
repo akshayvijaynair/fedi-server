@@ -8,11 +8,12 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.parimal.blog.entities.Account;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
 import com.parimal.blog.exceptions.ApiException;
 import com.parimal.blog.payloads.JwtAuthRequest;
 import com.parimal.blog.payloads.JwtAuthResponse;
@@ -20,7 +21,11 @@ import com.parimal.blog.payloads.UserDto;
 import com.parimal.blog.security.JwtTokenHelper;
 import com.parimal.blog.services.UserService;
 
+import java.util.HashMap;
+import java.util.Map;
+
 @RestController
+@CrossOrigin(origins = "http://localhost:4200")
 @RequestMapping("/api/v1/auth/")
 public class AuthController {
 
@@ -32,10 +37,14 @@ public class AuthController {
 
 	@Autowired
 	private AuthenticationManager authenticationManager;
-	
+
 	@Autowired
 	private UserService userService;
 
+	@Autowired
+	private ObjectMapper objectMapper;
+
+	@CrossOrigin(origins = "http://localhost:4200")
 	@PostMapping("/login")
 	public ResponseEntity<JwtAuthResponse> createToken(@RequestBody JwtAuthRequest request) throws Exception {
 		this.authenticate(request.getUsername(), request.getPassword());
@@ -44,31 +53,42 @@ public class AuthController {
 
 		JwtAuthResponse response = new JwtAuthResponse();
 		response.setToken(token);
-		// response.setUser(this.mapper.map((User) userDetails, UserDto.class));
-		return new ResponseEntity<JwtAuthResponse>(response, HttpStatus.OK);
+		return new ResponseEntity<>(response, HttpStatus.OK);
 	}
 
 	private void authenticate(String username, String password) throws Exception {
-
-		UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(username,
-				password);
-
+		UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(username, password);
 		try {
-
 			this.authenticationManager.authenticate(authenticationToken);
-
 		} catch (BadCredentialsException e) {
-			System.out.println("Invalid Detials !!");
-			throw new ApiException("Invalid username or password !!");
+			System.out.println("Invalid Details!");
+			throw new ApiException("Invalid username or password!");
 		}
-
-	};
-	
-	//register new user API
-	@PostMapping("/register")
-	public ResponseEntity<UserDto> registerUser(@RequestBody UserDto userDto){
-		UserDto registeredUser = this.userService.registerNewUser(userDto);
-		return new ResponseEntity<UserDto>(registeredUser, HttpStatus.CREATED);
 	}
 
+	// Register new user API with ActivityPub integration
+	@CrossOrigin(origins = "http://localhost:4200")
+	@PostMapping("/register")
+	public ResponseEntity<?> registerUser(@RequestBody UserDto userDto) {
+		try {
+			// Register user and get the created Account with ActivityPub details
+			Account account = userService.registerNewUser(userDto);
+
+			// Prepare a response map with account details
+			Map<String, Object> response = new HashMap<>();
+			response.put("message", "User registered successfully");
+			response.put("account", account);
+
+			return new ResponseEntity<>(response, HttpStatus.CREATED);
+		} catch (RuntimeException e) {
+			// Handle duplicate account or any other registration error gracefully
+			if (e.getMessage().contains("already exists")) {
+				return ResponseEntity.status(HttpStatus.CONFLICT)
+						.body(Map.of("error", "Account with email " + userDto.getEmail() + " already exists."));
+			}
+			// For other exceptions, return a general error message
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+					.body(Map.of("error", "Failed to register user. Please try again later."));
+		}
+	}
 }

@@ -62,7 +62,6 @@ public class UserServiceImpl implements UserService {
 		user.setName(userDto.getName());
 		user.setEmail(userDto.getEmail());
 		user.setPassword(passwordEncoder.encode(userDto.getPassword())); // Encrypt the password
-		user.setAbout(userDto.getAbout());
 
 		User updatedUser = this.userRepo.save(user);
 		return this.userToDto(updatedUser);
@@ -102,7 +101,6 @@ public class UserServiceImpl implements UserService {
 		user.setName(userDto.getName());
 		user.setEmail(userDto.getEmail());
 		user.setPassword(passwordEncoder.encode(userDto.getPassword())); // Encrypt password
-		user.setAbout(userDto.getAbout());
 		userRepo.save(user);
 
 		// Generate follow URL
@@ -217,8 +215,6 @@ public class UserServiceImpl implements UserService {
 			account.setPrivkey(privkeyJson);
 			account.setPubkey(privkeyJson); // Use a correct pubkey if different
 			account.setFollowUrl(followUrl); // Explicitly set the follow URL
-
-			account.setSummary(userDto.getAbout());
 
 			System.out.println("Saving account with follow URL: " + followUrl); // Debugging log
 			return accountRepo.save(account);

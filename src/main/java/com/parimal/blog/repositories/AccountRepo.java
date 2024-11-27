@@ -17,4 +17,9 @@ public interface AccountRepo extends JpaRepository<Account, Long> {
 
     @Query(value = "SELECT actor->>'inbox' FROM accounts WHERE name = :actor", nativeQuery = true)
     String findInboxByActor(String actor);
+
+
+    // Query by Actor URL (JSONB field)
+    @Query(value = "SELECT * FROM accounts WHERE actor->>'id' = :actorUrl", nativeQuery = true)
+    Optional<Account> findByActorUrl(String actorUrl);
 }

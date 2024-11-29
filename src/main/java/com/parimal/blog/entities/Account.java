@@ -6,6 +6,7 @@ import lombok.Data;
 import javax.persistence.*;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
@@ -74,4 +75,12 @@ public class Account {
     public String getActorUrl() {
         return actor != null && actor.has("id") ? actor.get("id").asText() : null;
     }
+
+    public Set<String> getFollowingIds() {
+        return following.stream()
+                .filter(node -> node.has("id"))
+                .map(node -> node.get("id").asText())
+                .collect(Collectors.toSet());
+    }
+
 }

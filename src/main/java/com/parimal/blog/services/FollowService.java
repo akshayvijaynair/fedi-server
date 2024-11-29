@@ -29,4 +29,6 @@ public interface FollowService {
 
     // Generate a follow URL for a given username
     String generateFollowUrl(String username);
+
+    List<String> getFollowers(String actor);
 }

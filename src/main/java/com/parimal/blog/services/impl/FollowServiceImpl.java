@@ -5,6 +5,7 @@ import com.parimal.blog.payloads.FollowRequestResponse;
 import com.parimal.blog.entities.Account;
 import com.parimal.blog.entities.FollowRequest;
 import com.parimal.blog.repositories.AccountRepo;
+import com.parimal.blog.repositories.FollowRepo;
 import com.parimal.blog.repositories.FollowRequestRepo;
 import com.parimal.blog.services.FollowService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +26,9 @@ public class FollowServiceImpl implements FollowService {
 
     @Autowired
     private FollowRequestRepo followRequestRepo;
+
+    @Autowired
+    private FollowRepo followRepository;
 
     @Override
     @Transactional
@@ -146,5 +150,10 @@ public class FollowServiceImpl implements FollowService {
     @Override
     public String generateFollowUrl(String username) {
         return "https://example.com/activitypub/follow/" + username;
+    }
+
+    @Override
+    public List<String> getFollowers(String actor) {
+        return followRepository.findFollowersByFollowee(actor);
     }
 }

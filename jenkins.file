@@ -1,0 +1,45 @@
+pipeline {
+    agent any
+
+    triggers {
+        pollSCM('H/5 * * * *') // Poll the SCM every 5 minutes
+    }
+
+    stages {
+        stage('Setup') {
+            steps {
+                echo "Lunch Pipeline"
+                sh 'ls'  // List the contents of the workspace
+            }
+        }
+
+        stage('Git Checkout') {
+            steps {
+                git branch: 'pipeline_dev', url: 'https://github.com/akshayvijaynair/fedi-server'
+                sh 'ls'  // List the contents of the workspace after checkout
+            }
+        }
+
+        stage("Build") {
+            steps {
+                sh 'chmod +x ./mvnw'  // Ensure mvnw is executable
+                sh './mvnw compile'
+                sh './mvnw test'
+                sh './mvnw package'
+            }
+        }
+
+        stage("Capture") {
+            steps {
+                // Archive the JAR file(s) after build
+                archiveArtifacts allowEmptyArchive: true, artifacts: 'target/*.jar', followSymlinks: false
+
+                // Ensure Jacoco and JUnit are configured correctly
+                jacoco()
+
+                // Archive the JUnit test result files
+                junit '**/target/surefire-reports/TEST*.xml'
+            }
+        }
+    }
+}

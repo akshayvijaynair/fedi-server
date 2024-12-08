@@ -75,7 +75,7 @@ public class FollowServiceImpl implements FollowService {
                 .orElseThrow(() -> new RuntimeException("User account not found."));
 
         // Fetch both incoming and outgoing requests
-        List<FollowRequest> incomingRequests = followRequestRepo.findByFolloweeId(user.getId());
+        List<FollowRequest> incomingRequests = followRequestRepo.findAllRequestsForUser(user.getId());
         List<FollowRequest> outgoingRequests = followRequestRepo.findByFollowerId(user.getId());
 
         // Combine and transform requests

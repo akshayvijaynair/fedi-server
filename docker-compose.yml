@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres
+    networks:
+      - capstone-network
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: The/koufax32
+      POSTGRES_DB: blog-apis
+    ports:
+      - "55008:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    image: zeppsolutions1966/fedi-server:v30.2
+    networks:
+      - capstone-network
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: blog-apis
+      DB_USERNAME: postgres
+      DB_PASSWORD: The/koufax32
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+
+
+  client:
+    image: zeppsolutions1966/fedi-client:v4.0  # Your client image
+    networks:
+      - capstone-network
+    environment:
+      API_URL: http://app:8080  # Point to the backend app service
+    ports:
+      - "8100:8100"  # Expose the client on port 8100
+    depends_on:
+      - app
+
+volumes:
+ postgres_data:
+
+networks:
+  capstone-network:
+     external: true

@@ -17,6 +17,7 @@ import com.parimal.blog.payloads.ApiResponse;
 import com.parimal.blog.payloads.UserDto;
 import com.parimal.blog.services.UserService;
 
+@CrossOrigin(origins = "*")
 @RestController
 @RequestMapping(value ="/api/users")
 public class UserController {

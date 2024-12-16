@@ -22,7 +22,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @RestController
-@CrossOrigin(origins = "http://localhost:4200")
+@CrossOrigin(origins = "*")
 @RequestMapping("/api/v1/auth/")
 public class AuthController {
 
@@ -41,7 +41,7 @@ public class AuthController {
 	@Autowired
 	private ObjectMapper objectMapper;
 
-	@CrossOrigin(origins = "http://localhost:4200")
+	@CrossOrigin(origins = "*")
 	@PostMapping("/login")
 	public ResponseEntity<JwtAuthResponse> createToken(@RequestBody JwtAuthRequest request) throws Exception {
 		this.authenticate(request.getUsername(), request.getPassword());
@@ -64,7 +64,7 @@ public class AuthController {
 	}
 
 	// Register new user API with ActivityPub integration
-	@CrossOrigin(origins = "http://localhost:4200")
+	@CrossOrigin(origins = "*")
 	@PostMapping("/register")
 	public ResponseEntity<?> registerUser(@RequestBody UserDto userDto) {
 		try {

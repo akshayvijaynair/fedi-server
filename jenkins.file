@@ -2,21 +2,26 @@ pipeline {
     agent any
 
     triggers {
-        pollSCM('H/5 * * * *') // Poll the SCM every 5 minutes
+        pollSCM('H/5 * * * *') 
+    }
+
+    environment {
+        DOCKER_IMAGE = "zeppsolutions1966/spring-boot-docker"
+        DOCKER_TAG = "latest" 
     }
 
     stages {
         stage('Setup') {
             steps {
-                echo "Lunch Pipeline"
-                sh 'ls'  // List the contents of the workspace
+                echo "Launching Pipeline"
+                sh 'ls'  
             }
         }
 
         stage('Git Checkout') {
             steps {
                 git branch: 'dev', url: 'https://github.com/akshayvijaynair/fedi-server'
-                sh 'ls'  // List the contents of the workspace after checkout
+                sh 'ls'  
             }
         }
 
@@ -25,20 +30,40 @@ pipeline {
                 sh 'chmod +x ./mvnw'  // Ensure mvnw is executable
                 sh './mvnw compile'
                 sh './mvnw test'
-                sh './mvnw package'
+                sh './mvnw package -DskipTests' // Package the application skipping tests
             }
         }
 
         stage("Capture") {
             steps {
-                // Archive the JAR file(s) after build
+                
                 archiveArtifacts allowEmptyArchive: true, artifacts: 'target/*.jar', followSymlinks: false
 
-                // Ensure Jacoco and JUnit are configured correctly
+                
                 jacoco()
 
                 // Archive the JUnit test result files
                 junit '**/target/surefire-reports/TEST*.xml'
+            }
+        }
+
+        stage("Docker Build") {
+            steps {
+                script {
+                    
+                    sh "docker build -t $DOCKER_IMAGE:$DOCKER_TAG ."
+                }
+            }
+        }
+
+        stage("Docker Push") {
+            steps {
+                script {
+                    withDockerRegistry([credentialsId: 'Docker_Hub_login', url: '']) {
+                        
+                        sh "docker push $DOCKER_IMAGE:$DOCKER_TAG"
+                    }
+                }
             }
         }
     }

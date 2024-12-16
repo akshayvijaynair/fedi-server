@@ -2,44 +2,44 @@ pipeline {
     agent any
 
     triggers {
-        pollSCM('H/5 * * * *')
+        pollSCM('H/5 * * * *') // Poll the SCM every 5 minutes
     }
 
     environment {
         DOCKER_IMAGE = "zeppsolutions1966/spring-boot-docker"
-        DOCKER_TAG = "latest"
+        DOCKER_TAG = "latest" // Optionally, replace with a version or Git commit hash
     }
 
     stages {
         stage('Setup') {
             steps {
                 echo "Launching Pipeline"
-                sh 'ls'
+                sh 'ls'  // List the contents of the workspace
             }
         }
 
         stage('Git Checkout') {
             steps {
                 git branch: 'dev', url: 'https://github.com/akshayvijaynair/fedi-server'
-                sh 'ls'
+                sh 'ls'  // List the contents of the workspace after checkout
             }
         }
 
         stage("Build") {
             steps {
-                sh 'chmod +x ./mvnw'
+                sh 'chmod +x ./mvnw'  // Ensure mvnw is executable
                 sh './mvnw compile'
                 sh './mvnw test'
-                sh './mvnw package -DskipTests'
+                sh './mvnw package -DskipTests' // Package the application skipping tests
             }
         }
 
         stage("Capture") {
             steps {
-
+                // Archive the JAR file(s) after build
                 archiveArtifacts allowEmptyArchive: true, artifacts: 'target/*.jar', followSymlinks: false
 
-
+                // Ensure Jacoco and JUnit are configured correctly
                 jacoco()
 
                 // Archive the JUnit test result files
@@ -50,7 +50,7 @@ pipeline {
         stage("Docker Build") {
             steps {
                 script {
-
+                    // Build the Docker image using the Dockerfile
                     sh "docker build -t $DOCKER_IMAGE:$DOCKER_TAG ."
                 }
             }
@@ -60,7 +60,7 @@ pipeline {
             steps {
                 script {
                     withDockerRegistry([credentialsId: 'Docker_Hub_login', url: '']) {
-
+                        // Push the Docker image to Docker Hub
                         sh "docker push $DOCKER_IMAGE:$DOCKER_TAG"
                     }
                 }

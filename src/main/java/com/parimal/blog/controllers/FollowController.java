@@ -12,13 +12,13 @@ public class FollowController {
     @Autowired
     private FollowService followService;
 
-    @PostMapping("/request")
+    /*@PostMapping("/request")
     public ResponseEntity<String> sendFollowRequest(@RequestParam Long followerId, @RequestParam Long followeeId) {
         followService.sendFollowRequest(followerId, followeeId);
         return ResponseEntity.ok("Follow request sent successfully.");
-    }
+    }*/
 
-    @GetMapping("/pending")
+    /*@GetMapping("/pending")
     public ResponseEntity<?> getPendingFollowRequests(@RequestParam Long accountId) {
         return ResponseEntity.ok(followService.getPendingFollowRequests(accountId));
     }
@@ -29,5 +29,5 @@ public class FollowController {
             @RequestParam boolean accept) {
         followService.handleFollowResponse(followRequestId, accept);
         return ResponseEntity.ok(accept ? "Follow request accepted." : "Follow request rejected.");
-    }
+    }*/
 }

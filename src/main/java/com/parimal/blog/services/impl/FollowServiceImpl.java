@@ -1,24 +1,22 @@
 package com.parimal.blog.services.impl;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.parimal.blog.payloads.FollowRequestResponse;
 import com.parimal.blog.entities.Account;
 import com.parimal.blog.entities.FollowRequest;
 import com.parimal.blog.repositories.AccountRepo;
+import com.parimal.blog.repositories.FollowRepo;
 import com.parimal.blog.repositories.FollowRequestRepo;
 import com.parimal.blog.services.FollowService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.RestTemplate;
 
 import javax.transaction.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 public class FollowServiceImpl implements FollowService {
@@ -30,61 +28,123 @@ public class FollowServiceImpl implements FollowService {
     private FollowRequestRepo followRequestRepo;
 
     @Autowired
-    private ObjectMapper objectMapper;
+    private FollowRepo followRepository;
 
     @Override
     @Transactional
-    public void sendFollowRequest(Long followerId, Long followeeId) {
-        // Validation and existing request checks
+    public void saveFollowRequest(JsonNode activity) {
+        String actor = activity.get("actor").asText();
+        String object = activity.get("object").asText();
 
-        // Retrieve follower and followee accounts
-        Account follower = accountRepo.findById(followerId).orElseThrow(() -> new RuntimeException("Follower not found."));
-        Account followee = accountRepo.findById(followeeId).orElseThrow(() -> new RuntimeException("Followee not found."));
+        Account follower = accountRepo.findByActorUrl(actor)
+                .orElseThrow(() -> new RuntimeException("Follower account not found."));
+        Account followee = accountRepo.findByActorUrl(object)
+                .orElseThrow(() -> new RuntimeException("Followee account not found."));
 
-        // Build the follow activity
-        JsonNode followActivity = buildFollowRequestActivity(follower, followee);
-
-        // Send activity to the followee's inbox
-        String inboxUrl = followee.getActor().get("inbox").asText();
-        sendActivityToInbox(inboxUrl, followActivity);
-
-        // Save the follow request in the database
         FollowRequest followRequest = new FollowRequest();
         followRequest.setFollower(follower);
         followRequest.setFollowee(followee);
         followRequest.setStatus("PENDING");
         followRequest.setCreatedAt(LocalDateTime.now());
         followRequest.setUpdatedAt(LocalDateTime.now());
+
         followRequestRepo.save(followRequest);
     }
 
+    @Override
+    public List<FollowRequestResponse> getFollowRequestsForUser(String name) {
+        Account followee = accountRepo.findByName(name)
+                .orElseThrow(() -> new RuntimeException("User account not found."));
+        List<FollowRequest> requests = followRequestRepo.findByFolloweeId(followee.getId());
+
+        return requests.stream()
+                .map(request -> new FollowRequestResponse(
+                        request.getFollower().getActor().get("id").asText(),
+                        request.getFollowee().getActor().get("id").asText(),
+                        "User " + request.getFollower().getName() + " wants to follow " + request.getFollowee().getName(),
+                        request.getStatus(),
+                        request.getCreatedAt(),
+                        request.getUpdatedAt()
+                ))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<FollowRequestResponse> getAllRequestsForUser(String name) {
+        Account user = accountRepo.findByName(name)
+                .orElseThrow(() -> new RuntimeException("User account not found."));
+
+        // Fetch both incoming and outgoing requests
+        List<FollowRequest> incomingRequests = followRequestRepo.findAllRequestsForUser(user.getId());
+        List<FollowRequest> outgoingRequests = followRequestRepo.findByFollowerId(user.getId());
+
+        // Combine and transform requests
+        return Stream.concat(incomingRequests.stream(), outgoingRequests.stream())
+                .map(request -> new FollowRequestResponse(
+                        request.getFollower().getActor().get("id").asText(),
+                        request.getFollowee().getActor().get("id").asText(),
+                        request.getFollower().getId().equals(user.getId())
+                                ? "You sent a follow request to " + request.getFollowee().getName()
+                                : "User " + request.getFollower().getName() + " wants to follow you",
+                        request.getStatus(),
+                        request.getCreatedAt(),
+                        request.getUpdatedAt()
+                ))
+                .collect(Collectors.toList());
+    }
 
     @Override
     @Transactional
-    public void handleFollowResponse(Long followRequestId, boolean accept) {
-        FollowRequest followRequest = followRequestRepo.findById(followRequestId)
+    public void acceptFollowRequest(Long requestId) {
+        FollowRequest followRequest = followRequestRepo.findById(requestId)
                 .orElseThrow(() -> new RuntimeException("Follow request not found."));
 
-        if (!followRequest.getStatus().equals("PENDING")) {
-            throw new IllegalStateException("Follow request is not pending.");
+        if (!"PENDING".equalsIgnoreCase(followRequest.getStatus())) {
+            throw new RuntimeException("Follow request is not in a pending state.");
         }
 
-        followRequest.setStatus(accept ? "ACCEPTED" : "REJECTED");
-        followRequest.setUpdatedAt(LocalDateTime.now());
-        followRequestRepo.save(followRequest);
+        Account follower = followRequest.getFollower();
+        Account followee = followRequest.getFollowee();
 
-        if (accept) {
-            Account follower = followRequest.getFollower();
-            Account followee = followRequest.getFollowee();
+        // Add actor of the follower to followee's followers
+        followee.getFollowers().add(follower.getActor());
+        // Add actor of the followee to follower's following
+        follower.getFollowing().add(followee.getActor());
 
-            JsonNode acceptActivity = buildResponseActivity("Accept", followee, follower);
-            sendActivityToInbox(follower.getActor().get("inbox").asText(), acceptActivity);
-        }
+        accountRepo.save(follower);
+        accountRepo.save(followee);
+
+        followRequestRepo.delete(followRequest);
     }
 
     @Override
-    public List<FollowRequest> getPendingFollowRequests(Long accountId) {
-        return followRequestRepo.findByFolloweeIdAndStatus(accountId, "PENDING");
+    public Set<JsonNode> getFollowersActors(String username) {
+        Account account = accountRepo.findByName(username)
+                .orElseThrow(() -> new RuntimeException("User not found."));
+        return account.getFollowers();
+    }
+
+    @Override
+    public Set<JsonNode> getFollowingActors(String username) {
+        Account account = accountRepo.findByName(username)
+                .orElseThrow(() -> new RuntimeException("User not found."));
+        return account.getFollowing();
+    }
+
+    @Override
+    public void addFollower(String username, JsonNode actor) {
+        Account account = accountRepo.findByName(username)
+                .orElseThrow(() -> new RuntimeException("User not found."));
+        account.getFollowers().add(actor);
+        accountRepo.save(account);
+    }
+
+    @Override
+    public void addFollowing(String username, JsonNode actor) {
+        Account account = accountRepo.findByName(username)
+                .orElseThrow(() -> new RuntimeException("User not found."));
+        account.getFollowing().add(actor);
+        accountRepo.save(account);
     }
 
     @Override
@@ -92,51 +152,8 @@ public class FollowServiceImpl implements FollowService {
         return "https://example.com/activitypub/follow/" + username;
     }
 
-    private JsonNode buildFollowRequestActivity(Account follower, Account followee) {
-        ObjectNode activity = objectMapper.createObjectNode();
-        activity.put("@context", "https://www.w3.org/ns/activitystreams");
-        activity.put("type", "Follow");
-        activity.put("actor", follower.getActor().get("id").asText());
-        activity.put("object", followee.getActor().get("id").asText());
-        activity.put("summary", "User " + follower.getName() + " wants to follow " + followee.getName());
-
-        // Additional metadata for followee to respond
-        ObjectNode meta = activity.putObject("meta");
-        meta.put("actionAccept", "/api/follow/accept?followerId=" + follower.getId() + "&followeeId=" + followee.getId());
-        meta.put("actionReject", "/api/follow/reject?followerId=" + follower.getId() + "&followeeId=" + followee.getId());
-
-        return activity;
+    @Override
+    public List<String> getFollowers(String actor) {
+        return followRepository.findFollowersByFollowee(actor);
     }
-
-
-    private JsonNode buildResponseActivity(String type, Account targetAccount, Account followerAccount) {
-        return objectMapper.createObjectNode()
-                .put("@context", "https://www.w3.org/ns/activitystreams")
-                .put("type", type)
-                .put("actor", targetAccount.getActor().get("id").asText())
-                .put("object", followerAccount.getActor().get("id").asText());
-    }
-
-    private void sendActivityToInbox(String inboxUrl, JsonNode activity) {
-        RestTemplate restTemplate = new RestTemplate();
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set("Authorization", "Bearer eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJ0ZXN0M0BnbWFpbC5jb20iLCJleHAiOjE3MzI2NjQxNDUsImlhdCI6MTczMjY0NjE0NX0.c3oO2OuH8Y6JTA6lzZ-hD8OA8OftAcJAenXfzLTDSCCD-3F4qITt4rFaSGRfuBufPue1TIAv78GoZGdhGWquwg");
-
-        HttpEntity<String> requestEntity = new HttpEntity<>(activity.toString(), headers);
-
-        try {
-            System.out.println("Sending activity to inbox: " + inboxUrl);
-            restTemplate.postForObject(inboxUrl, requestEntity, String.class);
-        } catch (HttpClientErrorException e) {
-            System.err.println("HTTP Error: " + e.getStatusCode() + " - " + e.getResponseBodyAsString());
-            throw new RuntimeException("Failed to send activity to inbox. HTTP Status: " + e.getStatusCode(), e);
-        } catch (Exception e) {
-            System.err.println("Error sending activity: " + e.getMessage());
-            throw new RuntimeException("Failed to send activity to inbox.", e);
-        }
-    }
-
-
 }

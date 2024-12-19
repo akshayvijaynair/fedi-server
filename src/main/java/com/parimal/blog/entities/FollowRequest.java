@@ -1,6 +1,5 @@
 package com.parimal.blog.entities;
 
-
 import lombok.Data;
 
 import javax.persistence.*;
@@ -17,11 +16,11 @@ public class FollowRequest {
 
     @ManyToOne
     @JoinColumn(name = "follower_id", nullable = false)
-    private Account follower; // Account initiating the follow request
+    private Account follower;
 
     @ManyToOne
     @JoinColumn(name = "followee_id", nullable = false)
-    private Account followee; // Account being followed
+    private Account followee;
 
     @Column(name = "status", nullable = false)
     private String status; // PENDING, ACCEPTED, REJECTED

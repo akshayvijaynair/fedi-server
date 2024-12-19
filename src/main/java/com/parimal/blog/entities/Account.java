@@ -1,7 +1,15 @@
 package com.parimal.blog.entities;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import lombok.Data;
+
 import javax.persistence.*;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
 import org.hibernate.annotations.Type;
 import org.hibernate.annotations.TypeDef;
 import org.hibernate.annotations.TypeDefs;
@@ -12,6 +20,9 @@ import com.vladmihalcea.hibernate.type.json.JsonBinaryType;
 @TypeDefs({
         @TypeDef(name = "json", typeClass = JsonBinaryType.class)
 })
+@Data
+@EqualsAndHashCode
+@ToString
 public class Account {
 
     @Id
@@ -43,11 +54,13 @@ public class Account {
     @Column(name = "icon", columnDefinition = "TEXT")
     private String icon;
 
-    @Column(name = "followers", columnDefinition = "TEXT")
-    private String followers;
+    @Type(type = "json")
+    @Column(name = "followers", columnDefinition = "jsonb", nullable = true)
+    private Set<JsonNode> followers = new HashSet<>();
 
-    @Column(name = "following", columnDefinition = "TEXT")
-    private String following;
+    @Type(type = "json")
+    @Column(name = "following", columnDefinition = "jsonb", nullable = true)
+    private Set<JsonNode> following = new HashSet<>();
 
     @Column(name = "liked", columnDefinition = "TEXT")
     private String liked;
@@ -58,110 +71,16 @@ public class Account {
     @Column(name = "follow_endpoint", nullable = true, columnDefinition = "TEXT")
     private String followUrl;
 
-    // Getters and setters
-
-    public Long getId() {
-        return id;
+    // Utility method to get actor URL from JSON
+    public String getActorUrl() {
+        return actor != null && actor.has("id") ? actor.get("id").asText() : null;
     }
 
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public JsonNode getActor() {
-        return actor;
-    }
-
-    public void setActor(JsonNode actor) {
-        this.actor = actor;
-    }
-
-    public JsonNode getPubkey() {
-        return pubkey;
-    }
-
-    public void setPubkey(JsonNode pubkey) {
-        this.pubkey = pubkey;
-    }
-
-    public JsonNode getPrivkey() {
-        return privkey;
-    }
-
-    public void setPrivkey(JsonNode privkey) {
-        this.privkey = privkey;
-    }
-
-    public JsonNode getWebfinger() {
-        return webfinger;
-    }
-
-    public void setWebfinger(JsonNode webfinger) {
-        this.webfinger = webfinger;
-    }
-
-    public String getSummary() {
-        return summary;
-    }
-
-    public void setSummary(String summary) {
-        this.summary = summary;
-    }
-
-    public String getIcon() {
-        return icon;
-    }
-
-    public void setIcon(String icon) {
-        this.icon = icon;
-    }
-
-    public String getFollowers() {
-        return followers;
-    }
-
-    public void setFollowers(String followers) {
-        this.followers = followers;
-    }
-
-    public String getFollowing() {
-        return following;
-    }
-
-    public void setFollowing(String following) {
-        this.following = following;
-    }
-
-    public String getLiked() {
-        return liked;
-    }
-
-    public void setLiked(String liked) {
-        this.liked = liked;
-    }
-
-    public String getEndpoints() {
-        return endpoints;
-    }
-
-    public void setEndpoints(String endpoints) {
-        this.endpoints = endpoints;
-    }
-
-    public String getFollowUrl() {
-        return followUrl;
-    }
-
-    public void setFollowUrl(String followUrl) {
-        this.followUrl = followUrl;
+    public Set<String> getFollowingIds() {
+        return following.stream()
+                .filter(node -> node.has("id"))
+                .map(node -> node.get("id").asText())
+                .collect(Collectors.toSet());
     }
 
 }
